@@ -1,19 +1,23 @@
-# Librerías de interfaz y visualización
-import streamlit as st
+import sys
+import os
 import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
-import plotly.express as px
+import streamlit as st
 import pandas as pd
-import networkx as nx
+import plotly.express as px
 import json
+from collections import Counter
+from datetime import datetime
 from sim.simulation import Simulation
+from visual.map.map_builder import draw_folium_map
 from visual.avl_visualizer import AVLVisualizer
 from domain.route import Route
 from tda.avl import AVLTree
-from collections import Counter
-from datetime import datetime
 from domain.order import Order
 from domain.client import Client
+from visual.report_generator import generate_report_pdf
+from api.global_simulation import set as set_simulation
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 # Configura título y diseño ancho para la app
 st.set_page_config(page_title="Sistema Logístico Autónomo", layout="wide")
@@ -26,12 +30,11 @@ tabs = st.tabs([
     "📈 General Statistics"
 ])
 
-# ----------------- Pestaña 0: Simulación ------------------
+# ----------------- Pestaña 0: Run Simulation ------------------
 with tabs[0]:
     st.markdown("## 🔄 Simulación de Red Logística")
     st.markdown("Ajusta los parámetros y ejecuta la simulación para generar la red.")
 
-    # Sliders para elegir nodos, aristas y órdenes
     col1, col2, col3 = st.columns(3)
     with col1:
         n_nodes = st.slider("🔢 Número de nodos", 10, 150, 15)
@@ -40,14 +43,12 @@ with tabs[0]:
     with col3:
         n_orders = st.slider("📦 Número de órdenes", 10, 500, 10)
 
-    # Detalle de roles usados en los nodos
     st.divider()
     st.markdown("### 📊 Proporción de Roles (automática)")
     st.markdown("- 📦 **Almacenamiento**: 20%")
     st.markdown("- 🔋 **Recarga**: 20%")
     st.markdown("- 👤 **Clientes**: 60%")
 
-    # Inicia simulación con los parámetros seleccionados
     st.divider()
     if st.button("🚀 Iniciar Simulación", use_container_width=True):
         sim = Simulation(n_nodes, m_edges)
@@ -67,221 +68,123 @@ with tabs[0]:
         col3.metric("👤 Clientes", f"{client} nodos", f"{round(client/total*100)}%")
 
         st.session_state.simulation = sim
+        set_simulation(sim)
 
-# ----------------- Pestaña 1: Explorar red ------------------
-
-# Sección para visualizar y explorar rutas
+# ----------------- Pestaña 1: Explore Network ------------------
 with tabs[1]:
     st.markdown("## 🌍 Exploración de Red y Rutas")
-    st.markdown("Visualiza los nodos y selecciona una ruta para destacar.")
+    st.markdown("Visualiza los nodos y selecciona una ruta para destacar sobre el mapa.")
 
     if "entrega_completada" not in st.session_state:
         st.session_state.entrega_completada = False
 
-    # Dibuja el grafo con nodos y ruta si hay
-    def draw_graph(sim, path=None):
-        graph = sim.get_graph()
-        roles = sim.get_roles()
-        G = nx.Graph()
-        pos = {}
-        color_map = []
-
-        for v in graph.vertices():
-            label = str(v)
-            pos[label] = (hash(v) % 100, hash(label[::-1]) % 100)
-            role = roles[v]
-
-            if "Cliente" in role:
-                color_map.append("blue")
-            elif "Almacenamiento" in role:
-                color_map.append("orange")
-            elif "Recarga" in role:
-                color_map.append("green")
-            else:
-                color_map.append("gray")
-
-            G.add_node(label)
-
-        for edge in graph.edges():
-            u, v = edge.endpoints()
-            G.add_edge(str(u), str(v), weight=edge.element())
-
-        edge_colors = [
-            "red" if path and ((u, v) in path or (v, u) in path) else "gray"
-            for u, v in G.edges()
-        ]
-
-        fig, ax = plt.subplots(figsize=(10, 6))
-        nx.draw(G, pos, with_labels=True, node_color=color_map,
-                edge_color=edge_colors, node_size=700, font_size=10, ax=ax)
-
-        try:
-            edge_labels = nx.get_edge_attributes(G, 'weight')
-            nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels, ax=ax)
-        except Exception as e:
-            st.warning(f"No se pudieron mostrar etiquetas de aristas: {e}")
-
-        legend_handles = [
-            mpatches.Patch(color='blue', label='Cliente'),
-            mpatches.Patch(color='orange', label='Almacenamiento'),
-            mpatches.Patch(color='green', label='Recarga')
-        ]
-        ax.legend(handles=legend_handles, title="Tipo de Nodo", loc="best")
-        st.pyplot(fig)
-
     if "simulation" in st.session_state:
         sim = st.session_state.simulation
-        vertices = list(sim.get_graph().vertices())
+        graph = sim.get_graph()
+        vertices = list(graph.vertices())
         labels = [str(v) for v in vertices]
         label_to_vertex = {str(v): v for v in vertices}
 
-        # Selección de origen y destino para buscar ruta
         col1, col2 = st.columns(2)
         with col1:
             origen = st.selectbox("📍 Origen", labels)
         with col2:
             destino = st.selectbox("🎯 Destino", labels)
 
-        if st.button("✈ Calcular Ruta"):
+        st.markdown("### 🔍 Algoritmo de Enrutamiento")
+        algorithm = st.radio("Algoritmo", options=["Dijkstra"], index=0)
+
+        ruta_actual = st.session_state.get("ruta_actual")
+        mst_actual = st.session_state.get("mst_actual")
+
+        if st.button("✈ Calcular ruta", use_container_width=True):
             if origen == destino:
                 st.warning("⚠️ El nodo origen y destino no pueden ser iguales.")
             else:
-                path, cost = sim.find_route(label_to_vertex[origen], label_to_vertex[destino])
-                if path and cost is not None:
-                    st.session_state["ruta_actual"] = {
-                        "path": path,
-                        "cost": cost,
-                        "origen": origen,
-                        "destino": destino
-                    }
-                    st.session_state.entrega_completada = False  # ← Reiniciar bandera al calcular nueva ruta
-                    st.success(f"✅ Ruta: {' → '.join(str(v) for v in path)} | Costo total: {cost}")
-                    draw_graph(sim, [(str(u), str(v)) for u, v in zip(path, path[1:])])
-                else:
-                    st.warning("⚠️ No se encontró una ruta válida entre los nodos seleccionados.")
+                if algorithm == "Dijkstra":
+                    path, cost = graph.dijkstra_shortest_path(label_to_vertex[origen], label_to_vertex[destino])
+                    if path and cost is not None and cost != float('inf'):
+                        st.session_state["ruta_actual"] = {"path": path, "cost": cost}
+                        st.session_state["mst_actual"] = None  # limpiar MST
+                        st.success(f"✅ Ruta: {' → '.join(str(v) for v in path)} | Costo: {cost}")
+                    else:
+                        st.session_state["ruta_actual"] = None
+                        st.warning("⚠️ No se encontró una ruta válida entre los nodos seleccionados.")
 
-        ruta_actual = st.session_state.get("ruta_actual")
-        entregado = st.session_state.get("entrega_completada", False)
+        if st.button("🌲 Mostrar MST", use_container_width=True):
+            mst_edges = sim.compute_mst()
+            if mst_edges:
+                st.session_state["mst_actual"] = mst_edges
+                st.session_state["ruta_actual"] = None  # limpiar ruta
+                st.success("🌲 MST generado y mostrado correctamente.")
+            else:
+                st.session_state["mst_actual"] = None
+                st.warning("⚠️ No se pudo generar el MST.")
 
-        if not ruta_actual:
-            draw_graph(sim)
+        # Actualiza el mapa según estado actual
+        if st.session_state.get("ruta_actual"):
+            draw_folium_map(sim, path=st.session_state["ruta_actual"]["path"])
+        elif st.session_state.get("mst_actual"):
+            draw_folium_map(sim, mst=st.session_state["mst_actual"])
+        else:
+            draw_folium_map(sim)
 
-        # Verifica si ya existe la ruta actual y permite registrar la orden
-        elif ruta_actual and not entregado:
-            if st.button("✅ Complete Delivery and Create Order"):
-                path = ruta_actual["path"]
-                cost = ruta_actual["cost"]
-                origen = ruta_actual["origen"]
-                destino = ruta_actual["destino"]
-
-                destino_vertex = label_to_vertex[destino]
-                client_id = str(destino_vertex)
-                if client_id not in sim.clients:
-                    sim.clients[client_id] = Client(client_id, f"Cliente {client_id}", destino_vertex)
-                client = sim.clients[client_id]
-                client.register_order()
-
-                orden_existente = None
-                for o in sim.orders:
-                    if (
-                        o.client.id == client.id and
-                        str(o.origin) == origen and
-                        str(o.destination) == destino and
-                        o.status == "Pendiente"
-                    ):
-                        orden_existente = o
-                        break
-
-                if orden_existente:
-                    orden_existente.status = "Entregado"
-                    orden_existente.delivered_at = datetime.now()
-                    orden_existente.path = path
-                    orden_existente.cost = cost
-                    order = orden_existente  # ← Aquí se asegura la variable "order"
-                else:
-                    order = Order(
-                        client=client,
-                        origin=label_to_vertex[origen],
-                        destination=destino_vertex,
-                        path=path,
-                        cost=cost
-                    )
-                    order.status = "Entregado"
-                    order.delivered_at = datetime.now()
-                    sim.orders.append(order)
-                sim.route_log.append(path)
-                st.session_state.simulation = sim
-
-                st.session_state["entrega_completada"] = True
-                st.session_state["ruta_actual"] = None
-
-                st.success(f"📦 Orden entregada exitosamente Cliente: {client.name} | ID: {client.id} Fecha: {order.delivered_at.strftime('%Y-%m-%d %H:%M:%S')}")
-                draw_graph(sim)
-
-        elif ruta_actual and entregado:
-            draw_graph(sim)
     else:
         st.info("ℹ️ Primero ejecuta una simulación en la pestaña 1.")
 
-# ----------------- Pestaña 2: Clientes y Órdenes ------------------
 
-# Muestra información de clientes y pedidos
+
+# ----------------- Pestaña 2: Clients & Orders ------------------
+
 with tabs[2]:
     st.markdown("## 🌐 Clientes y Órdenes Generadas")
     if "simulation" not in st.session_state:
-        st.warning("⚠️ Primero ejecuta una simulación.")
+        st.warning("⚠️ Primero ejecuta una simulación en la pestaña 1.")
     else:
         sim = st.session_state.simulation
         clients = sim.get_clients()
         orders = sim.get_all_orders()
 
         # Lista de clientes registrados en la simulación
-        st.subheader("👤 Lista de Clientes")
-        clients_data = [
-            {
-                "ID": client.id,
-                "Nombre": client.name,
-                "Ubicación": str(client.vertex),
-                "Total Pedidos": client.total_orders
-            } for client in clients
-        ]
-        for client in clients_data:
-            st.json(json.dumps({
-                "client_id": client["ID"],
-                "name": client["Nombre"],
-                "type": "premium",
-                "total_orders": client["Total Pedidos"]
-            }))
+        st.subheader("👤 Clientes")
+        if clients:
+            clients_json = []
+            for client in clients:
+                client_info = {
+                    "client_id": client.id,
+                    "name": client.name,
+                    "type": "normal" if client.total_orders < 5 else "premium",
+                    "total_orders": client.total_orders
+                }
+                clients_json.append(client_info)
+            st.json(clients_json)
+        else:
+            st.info("ℹ️ No hay clientes registrados todavía.")
 
         # Lista de órdenes realizadas en el sistema
-        st.subheader("📦 Lista de Órdenes")
-        orders_data = [
-            {
-                "ID": order.id,
-                "Cliente": order.client.name,
-                "Origen": str(order.origin),
-                "Destino": str(order.destination),
-                "Costo": order.cost
-            } for order in orders
-        ]
-        
-        for order in orders:
-            st.json(json.dumps({
-                "order_id": order.id,
-                "client": order.client.name,
-                "client_id": order.client.id,
-                "origin": str(order.origin),
-                "destination": str(order.destination),
-                "status": order.status,
-                "priority": order.priority,
-                "created_at": order.created_at.isoformat(),
-                "delivered_at": order.delivered_at.isoformat() if order.delivered_at else None,
-                "route_cost": order.cost,
-            }))
+        st.subheader("📦 Orders")
+        if orders:
+            orders_json = []
+            for order in orders:
+                order_info = {
+                    "order_id": str(order.id),
+                    "client": order.client.name,
+                    "client_id": order.client.id,
+                    "origin": str(order.origin),
+                    "destination": str(order.destination),
+                    "status": order.status,
+                    "priority": order.priority,
+                    "created_at": order.created_at.isoformat(),
+                    "delivered_at": order.delivered_at.isoformat() if order.delivered_at else None,
+                    "route_cost": order.cost,
+                }
+                orders_json.append(order_info)
+            st.json(orders_json)
+        else:
+            st.info("ℹ️ No hay órdenes registradas todavía.")
 
-# ----------------- Pestaña 3: Análisis de rutas ------------------
+# ----------------- Pestaña 3: Analisis de Rutas ------------------
 
-# Muestra rutas más frecuentes usando AVL
 with tabs[3]:
     st.markdown("## 📋 Análisis de Rutas Frecuentes")
     if "simulation" not in st.session_state:
@@ -309,6 +212,21 @@ with tabs[3]:
             vis = AVLVisualizer()
             fig = vis.draw(avl.root)
             st.pyplot(fig)
+
+            # Botón para generar informe PDF
+            st.subheader("📄 Generar Informe PDF")
+            if st.button("📝 Generar PDF del Informe", use_container_width=True):
+                filename = generate_report_pdf(sim)
+                st.success(f"✅ Informe generado: {filename}")
+                with open(filename, "rb") as pdf_file:
+                    st.download_button(
+                        label="⬇️ Descargar Informe PDF",
+                        data=pdf_file,
+                        file_name=filename,
+                        mime="application/pdf",
+                        use_container_width=True
+                    )
+
 
 # ----------------- Pestaña 4: Estadísticas ------------------
 
