@@ -1,4 +1,4 @@
-import sys
+import sys 
 import os
 import matplotlib.pyplot as plt
 import streamlit as st
@@ -51,6 +51,10 @@ with tabs[0]:
 
     st.divider()
     if st.button("🚀 Iniciar Simulación", use_container_width=True):
+        
+        if "coords" in st.session_state:
+            del st.session_state["coords"]
+
         sim = Simulation(n_nodes, m_edges)
         for _ in range(n_orders):
             sim.generate_order()
@@ -94,9 +98,6 @@ with tabs[1]:
         st.markdown("### 🔍 Algoritmo de Enrutamiento")
         algorithm = st.radio("Algoritmo", options=["Dijkstra"], index=0)
 
-        ruta_actual = st.session_state.get("ruta_actual")
-        mst_actual = st.session_state.get("mst_actual")
-
         if st.button("✈ Calcular ruta", use_container_width=True):
             if origen == destino:
                 st.warning("⚠️ El nodo origen y destino no pueden ser iguales.")
@@ -121,13 +122,10 @@ with tabs[1]:
                 st.session_state["mst_actual"] = None
                 st.warning("⚠️ No se pudo generar el MST.")
 
-        # Actualiza el mapa según estado actual
-        if st.session_state.get("ruta_actual"):
-            draw_folium_map(sim, path=st.session_state["ruta_actual"]["path"])
-        elif st.session_state.get("mst_actual"):
-            draw_folium_map(sim, mst=st.session_state["mst_actual"])
-        else:
-            draw_folium_map(sim)
+        # ✅ ÚNICA llamada al mapa al final, actualiza con ruta/MST si existen
+        path = st.session_state["ruta_actual"]["path"] if st.session_state.get("ruta_actual") else None
+        mst = st.session_state["mst_actual"] if st.session_state.get("mst_actual") else None
+        draw_folium_map(sim, path=path, mst=mst)
 
     else:
         st.info("ℹ️ Primero ejecuta una simulación en la pestaña 1.")

@@ -100,7 +100,7 @@ class Simulation:
             current_cost += edge_cost
 
             if current_cost > autonomy_limit:
-                recharge = self.find_nearest_recharge(last_node, roles)
+                recharge, _ = self.find_nearest_recharge(last_node, roles)
                 if recharge and recharge not in adjusted_path:
                     adjusted_path.append(recharge)
                     current_cost = 0  # reinicia autonomía tras recarga
@@ -115,17 +115,18 @@ class Simulation:
         closest_recharge = None
         for v in self.graph.vertices():
             if "Recarga" in roles[v]:
-                distance = self.graph.dijkstra_distance(node, v)
-                if distance < min_distance:
+                path, distance = self.graph.dijkstra_shortest_path(node, v)
+                if path and distance < min_distance:
                     min_distance = distance
                     closest_recharge = v
-        return closest_recharge
+        return closest_recharge, min_distance
 
     def compute_total_cost(self, path):
-        """Calcula el costo total de una ruta ajustada."""
         total = 0
-        for i in range(len(path) - 1):
-            edge = self.graph.get_edge(path[i], path[i+1])
+        for u, v in zip(path[:-1], path[1:]):
+            edge = self.graph.get_edge(u, v)
+            if edge is None:
+                raise ValueError(f"No se encontró una arista entre {u} y {v}. Revisa la generación del grafo o el camino calculado.")
             total += edge.element()
         return total
 
