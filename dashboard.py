@@ -51,7 +51,7 @@ with tabs[0]:
         n_orders = st.slider("📦 Número de órdenes", 10, 500, 10)
 
     st.divider()
-    st.markdown("### 📊 Proporción de Roles (automática)")
+    st.markdown("### 📊 Iniciar Simulación")
     st.markdown("- 📦 **Almacenamiento**: 20%")
     st.markdown("- 🔋 **Recarga**: 20%")
     st.markdown("- 👤 **Clientes**: 60%")
@@ -116,7 +116,7 @@ with tabs[1]:
                 if adjusted_path:
                     st.session_state["ruta_actual"] = {"path": adjusted_path, "cost": adjusted_cost}
                     st.session_state["mst_actual"] = None  # limpiar MST
-                    st.success("✅ Ruta calculada correctamente con Dijkstra y autonomía.")
+                    st.success("✅ Ruta calculada correctamente con Dijkstra")
                     st.session_state["info_ruta"] = {
                         "nodos": ' → '.join(str(v) for v in adjusted_path),
                         "costo": adjusted_cost
@@ -176,8 +176,6 @@ with tabs[1]:
     else:
         st.info("ℹ️ Primero ejecuta una simulación en la pestaña 1.")
 
-
-
 # ----------------- Pestaña 2: Clients & Orders ------------------
 
 with tabs[2]:
@@ -186,8 +184,16 @@ with tabs[2]:
         st.warning("⚠️ Primero ejecuta una simulación en la pestaña 1.")
     else:
         sim = st.session_state.simulation
-        clients = sim.get_clients()
-        orders = sim.get_all_orders()
+
+        # Botón para refrescar clientes y órdenes
+        if st.button("🔄 Refresh Orders & Clients", use_container_width=True):
+            st.session_state.clients_data = sim.get_clients()
+            st.session_state.orders_data = sim.get_all_orders()
+            st.success("Datos actualizados correctamente.")
+
+        # Obtiene los datos actualizados o actuales
+        clients = st.session_state.get("clients_data", sim.get_clients())
+        orders = st.session_state.get("orders_data", sim.get_all_orders())
 
         # Lista de clientes registrados en la simulación
         st.subheader("👤 Clientes")
@@ -218,8 +224,8 @@ with tabs[2]:
                     "destination": str(order.destination),
                     "status": order.status,
                     "priority": order.priority,
-                    "created_at": order.created_at.isoformat(),
-                    "delivered_at": order.delivered_at.isoformat() if order.delivered_at else None,
+                    "created_at": order.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+                    "delivered_at": order.delivered_at.strftime("%Y-%m-%d %H:%M:%S") if order.delivered_at else None,
                     "route_cost": order.cost,
                 }
                 orders_json.append(order_info)
