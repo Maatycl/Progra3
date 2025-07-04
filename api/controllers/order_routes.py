@@ -1,15 +1,12 @@
 from fastapi import APIRouter, HTTPException
-<<<<<<< HEAD
 from typing import List
 from api.schemas import OrderSchema
 from api.global_simulation import get as get_simulation
-=======
 from fastapi.responses import JSONResponse
 from typing import List
 from api.schemas import OrderSchema
 from api.global_simulation import get as get_simulation
 from datetime import datetime
->>>>>>> 561af5b8b8207df4be1a3e2593168893dade1e5c
 
 router = APIRouter()
 
@@ -17,11 +14,8 @@ router = APIRouter()
 def get_all_orders():
     sim = get_simulation()
     if sim is None or not sim.get_all_orders():
-<<<<<<< HEAD
         raise HTTPException(status_code=404, detail="No hay simulación activa o no hay órdenes registradas.")
-=======
         raise HTTPException(status_code=404, detail="No hay simulación activa. Genera una en el dashboard primero.")
->>>>>>> 561af5b8b8207df4be1a3e2593168893dade1e5c
 
     orders = sim.get_all_orders()
     return [
@@ -38,8 +32,6 @@ def get_all_orders():
             delivered_at=order.delivered_at.strftime("%Y-%m-%d %H:%M:%S") if order.delivered_at else None
         ) for order in orders
     ]
-<<<<<<< HEAD
-=======
 
 @router.get("/orders/orders/{order_id}", response_model=OrderSchema, summary="Obtener orden")
 def get_order_by_id(order_id: str):
@@ -96,4 +88,3 @@ def complete_order(order_id: str):
     order.status = "Entregado"
     order.delivered_at = datetime.now()
     return JSONResponse(content={"message": f"Orden {order_id} marcada como entregada correctamente."})
->>>>>>> 561af5b8b8207df4be1a3e2593168893dade1e5c

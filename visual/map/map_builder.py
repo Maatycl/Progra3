@@ -67,11 +67,7 @@ def draw_folium_map(sim, path=None, mst=None):
         for u, v in mst:
             folium.PolyLine(
                 locations=[coords[str(u)], coords[str(v)]],
-<<<<<<< HEAD
-                color="green",
-=======
                 color="purple",
->>>>>>> 561af5b8b8207df4be1a3e2593168893dade1e5c
                 weight=3,
                 dash_array="5, 5",
                 opacity=0.7,

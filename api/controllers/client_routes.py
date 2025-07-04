@@ -9,11 +9,8 @@ router = APIRouter()
 def get_all_clients():
     sim = get_simulation()
     if sim is None or not sim.get_clients():
-<<<<<<< HEAD
         raise HTTPException(status_code=404, detail="No hay simulación activa o no hay clientes registrados.")
-=======
         raise HTTPException(status_code=404, detail="No hay simulación activa. Genera una en el dashboard primero.")
->>>>>>> 561af5b8b8207df4be1a3e2593168893dade1e5c
     
     clients = sim.get_clients()  # Método de tu simulación para obtener clientes
     return [
@@ -29,11 +26,8 @@ def get_all_clients():
 def get_client_by_id(client_id: str):
     sim = get_simulation()
     if sim is None or not sim.get_clients():
-<<<<<<< HEAD
         raise HTTPException(status_code=404, detail="No hay simulación activa o no hay clientes registrados.")
-=======
         raise HTTPException(status_code=404, detail="No hay simulación activa. Genera una en el dashboard primero.")
->>>>>>> 561af5b8b8207df4be1a3e2593168893dade1e5c
 
     # Busca el cliente por ID
     client = next((c for c in sim.get_clients() if c.id == client_id), None)
