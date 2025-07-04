@@ -28,6 +28,9 @@ class Simulation:
             return None
 
         adjusted_path = self.enforce_autonomy_limit(path, self.vertex_roles)
+        if adjusted_path is None:
+            # No se puede completar la orden por falta de recarga
+            return None
         adjusted_cost = self.compute_total_cost(adjusted_path)
 
         client_id = str(destination)
@@ -88,7 +91,7 @@ class Simulation:
         return None, None
 
     def enforce_autonomy_limit(self, path, roles, autonomy_limit=AUTONOMY_LIMIT):
-        """Inserta nodos de recarga si la ruta excede la autonomía."""
+        """Inserta nodos de recarga si la ruta excede la autonomía. Si no hay recarga accesible, retorna None."""
         adjusted_path = []
         current_cost = 0
         last_node = path[0]
@@ -104,6 +107,9 @@ class Simulation:
                 if recharge and recharge not in adjusted_path:
                     adjusted_path.append(recharge)
                     current_cost = 0  # reinicia autonomía tras recarga
+                else:
+                    # No hay recarga accesible, el dron se queda sin batería
+                    return None
             adjusted_path.append(v)
             last_node = v
 

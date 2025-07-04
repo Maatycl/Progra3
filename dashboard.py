@@ -107,9 +107,14 @@ with tabs[1]:
                     if path and cost is not None and cost != float('inf'):
                         st.session_state["ruta_actual"] = {"path": path, "cost": cost}
                         st.session_state["mst_actual"] = None  # limpiar MST
-                        st.success(f"✅ Ruta: {' → '.join(str(v) for v in path)} | Costo: {cost}")
+                        st.success(f"✅ Ruta calculada correctamente.")
+                        st.session_state["info_ruta"] = {
+                            "nodos": ' → '.join(str(v) for v in path),
+                            "costo": cost
+                        }
                     else:
                         st.session_state["ruta_actual"] = None
+                        st.session_state["info_ruta"] = None
                         st.warning("⚠️ No se encontró una ruta válida entre los nodos seleccionados.")
 
         if st.button("🌲 Mostrar MST", use_container_width=True):
@@ -117,15 +122,38 @@ with tabs[1]:
             if mst_edges:
                 st.session_state["mst_actual"] = mst_edges
                 st.session_state["ruta_actual"] = None  # limpiar ruta
+                st.session_state["info_ruta"] = None
                 st.success("🌲 MST generado y mostrado correctamente.")
             else:
                 st.session_state["mst_actual"] = None
+                st.session_state["info_ruta"] = None
                 st.warning("⚠️ No se pudo generar el MST.")
 
         # ✅ ÚNICA llamada al mapa al final, actualiza con ruta/MST si existen
         path = st.session_state["ruta_actual"]["path"] if st.session_state.get("ruta_actual") else None
         mst = st.session_state["mst_actual"] if st.session_state.get("mst_actual") else None
         draw_folium_map(sim, path=path, mst=mst)
+
+        # Mostrar info de la ruta debajo del mapa
+        if st.session_state.get("info_ruta"):
+            st.markdown("---")
+            st.markdown(f"**Nodos en la ruta:** {st.session_state['info_ruta']['nodos']}")
+            st.markdown(f"**Costo total:** {st.session_state['info_ruta']['costo']}")
+            # Botón para completar la ruta
+            if st.button("✅ Completar Ruta", use_container_width=True):
+                st.session_state.entrega_completada = True
+                st.success("Entrega completada. Puedes generar un nuevo cálculo o analizar rutas.")
+
+        # Mostrar cantidad de nodos por tipo debajo del mapa
+        roles = sim.get_roles()
+        storage = sum(1 for r in roles.values() if "Almacenamiento" in r)
+        recharge = sum(1 for r in roles.values() if "Recarga" in r)
+        client = sum(1 for r in roles.values() if "Cliente" in r)
+        st.markdown("---")
+        st.markdown(f"**Nodos:**  ")
+        st.markdown(f"- 📦 Almacenamiento: {storage}")
+        st.markdown(f"- 🔋 Recarga: {recharge}")
+        st.markdown(f"- 👤 Clientes: {client}")
 
     else:
         st.info("ℹ️ Primero ejecuta una simulación en la pestaña 1.")
