@@ -51,7 +51,6 @@ with tabs[0]:
         n_orders = st.slider("📦 Número de órdenes", 10, 500, 10)
 
     st.divider()
-    st.markdown("### 📊 Proporción de Roles (automática)")
     st.markdown("### 📊 Iniciar Simulación")
     st.markdown("- 📦 **Almacenamiento**: 20%")
     st.markdown("- 🔋 **Recarga**: 20%")
@@ -59,9 +58,10 @@ with tabs[0]:
 
     st.divider()
     if st.button("🚀 Iniciar Simulación", use_container_width=True):
-        
-        if "coords" in st.session_state:
-            del st.session_state["coords"]
+        # Limpiar coordenadas y rutas/MST previos
+        for key in ["coords", "ruta_actual", "mst_actual", "info_ruta"]:
+            if key in st.session_state:
+                del st.session_state[key]
 
         sim = Simulation(n_nodes, m_edges)
         for _ in range(n_orders):

@@ -138,6 +138,47 @@ class Simulation:
                 mst_edges.append((u, v))
 
         return mst_edges
+    
+    def get_node_distribution(self):
+        """Devuelve un dict con el conteo de nodos: {"Storage": x, "Recharge": y, "Clients": z}"""
+        distribution = {"Storage": 0, "Recharge": 0, "Clients": 0}
+        for v, roles in self.vertex_roles.items():
+            if "Almacenamiento" in roles:
+                distribution["Storage"] += 1
+            elif "Recarga" in roles:
+                distribution["Recharge"] += 1
+            elif "Cliente" in roles:
+                distribution["Clients"] += 1
+        return distribution
+
+    def get_top_visited_clients(self, top_n=6):
+        """Devuelve lista [(client_id, total_orders)] de los clientes con más pedidos."""
+        sorted_clients = sorted(
+            self.clients.values(),
+            key=lambda c: c.total_orders,
+            reverse=True
+        )
+        return [(client.id, client.total_orders) for client in sorted_clients[:top_n]]
+
+    def get_top_visited_recharges(self, top_n=4):
+        """Devuelve lista [(recharge_node, visitas)] de las recargas más visitadas."""
+        visit_count = {}
+        for path in self.route_log:
+            for node in path:
+                if "Recarga" in self.vertex_roles.get(node, ""):
+                    visit_count[node] = visit_count.get(node, 0) + 1
+        sorted_visits = sorted(visit_count.items(), key=lambda x: x[1], reverse=True)
+        return [(str(node), count) for node, count in sorted_visits[:top_n]]
+
+    def get_top_visited_storage_nodes(self, top_n=4):
+        """Devuelve lista [(storage_node, visitas)] de los almacenamientos más visitados."""
+        visit_count = {}
+        for path in self.route_log:
+            for node in path:
+                if "Almacenamiento" in self.vertex_roles.get(node, ""):
+                    visit_count[node] = visit_count.get(node, 0) + 1
+        sorted_visits = sorted(visit_count.items(), key=lambda x: x[1], reverse=True)
+        return [(str(node), count) for node, count in sorted_visits[:top_n]]
 
     # Métodos auxiliares para acceso a datos
     def get_roles(self):

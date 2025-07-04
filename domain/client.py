@@ -1,6 +1,6 @@
 # Representa un cliente dentro del sistema logístico
 class Client:
-    def __init__(self, client_id, name, vertex):
+    def __init__(self, client_id, name, vertex, client_type="normal"):
         """
         Representa un cliente en el sistema logístico.
 
@@ -12,6 +12,7 @@ class Client:
         self.id = client_id # ID único del cliente
         self.name = name # Nombre del cliente
         self.vertex = vertex  # nodo en el grafo
+        self.type = client_type
         self.total_orders = 0 # Cantidad de pedidos realizados
 
     def register_order(self):

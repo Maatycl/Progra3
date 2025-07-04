@@ -47,9 +47,9 @@ def draw_folium_map(sim, path=None, mst=None):
         peso = edge.element()  # Obtiene el peso de la arista
         folium.PolyLine(
             locations=[coords[str(u)], coords[str(v)]],
-            color="gray",
-            weight=2,
-            opacity=0.5,
+            color="black",
+            weight=3.5,
+            opacity=1,
             popup=f"Peso: {peso}"  # Popup con el peso de la arista
         ).add_to(m)
 

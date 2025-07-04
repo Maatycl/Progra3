@@ -14,7 +14,6 @@ router = APIRouter()
 def get_all_orders():
     sim = get_simulation()
     if sim is None or not sim.get_all_orders():
-        raise HTTPException(status_code=404, detail="No hay simulación activa o no hay órdenes registradas.")
         raise HTTPException(status_code=404, detail="No hay simulación activa. Genera una en el dashboard primero.")
 
     orders = sim.get_all_orders()
