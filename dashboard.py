@@ -51,7 +51,11 @@ with tabs[0]:
         n_orders = st.slider("📦 Número de órdenes", 10, 500, 10)
 
     st.divider()
+<<<<<<< HEAD
     st.markdown("### 📊 Proporción de Roles (automática)")
+=======
+    st.markdown("### 📊 Iniciar Simulación")
+>>>>>>> 561af5b8b8207df4be1a3e2593168893dade1e5c
     st.markdown("- 📦 **Almacenamiento**: 20%")
     st.markdown("- 🔋 **Recarga**: 20%")
     st.markdown("- 👤 **Clientes**: 60%")
@@ -116,7 +120,11 @@ with tabs[1]:
                 if adjusted_path:
                     st.session_state["ruta_actual"] = {"path": adjusted_path, "cost": adjusted_cost}
                     st.session_state["mst_actual"] = None  # limpiar MST
+<<<<<<< HEAD
                     st.success("✅ Ruta calculada correctamente con Dijkstra y autonomía.")
+=======
+                    st.success("✅ Ruta calculada correctamente con Dijkstra")
+>>>>>>> 561af5b8b8207df4be1a3e2593168893dade1e5c
                     st.session_state["info_ruta"] = {
                         "nodos": ' → '.join(str(v) for v in adjusted_path),
                         "costo": adjusted_cost
@@ -139,11 +147,14 @@ with tabs[1]:
                 st.session_state["info_ruta"] = None
                 st.warning("⚠️ No se pudo generar el MST.")
 
+<<<<<<< HEAD
             # Botón adicional para ocultar el MST
         if st.button("❌ Ocultar MST", use_container_width=True):
             st.session_state["mst_actual"] = None
             st.success("🚫 MST oculto correctamente.")
 
+=======
+>>>>>>> 561af5b8b8207df4be1a3e2593168893dade1e5c
         # ✅ ÚNICA llamada al mapa al final, actualiza con ruta/MST si existen
         path = st.session_state["ruta_actual"]["path"] if st.session_state.get("ruta_actual") else None
         mst = st.session_state["mst_actual"] if st.session_state.get("mst_actual") else None
@@ -181,8 +192,11 @@ with tabs[1]:
     else:
         st.info("ℹ️ Primero ejecuta una simulación en la pestaña 1.")
 
+<<<<<<< HEAD
 
 
+=======
+>>>>>>> 561af5b8b8207df4be1a3e2593168893dade1e5c
 # ----------------- Pestaña 2: Clients & Orders ------------------
 
 with tabs[2]:
@@ -191,8 +205,21 @@ with tabs[2]:
         st.warning("⚠️ Primero ejecuta una simulación en la pestaña 1.")
     else:
         sim = st.session_state.simulation
+<<<<<<< HEAD
         clients = sim.get_clients()
         orders = sim.get_all_orders()
+=======
+
+        # Botón para refrescar clientes y órdenes
+        if st.button("🔄 Refresh Orders & Clients", use_container_width=True):
+            st.session_state.clients_data = sim.get_clients()
+            st.session_state.orders_data = sim.get_all_orders()
+            st.success("Datos actualizados correctamente.")
+
+        # Obtiene los datos actualizados o actuales
+        clients = st.session_state.get("clients_data", sim.get_clients())
+        orders = st.session_state.get("orders_data", sim.get_all_orders())
+>>>>>>> 561af5b8b8207df4be1a3e2593168893dade1e5c
 
         # Lista de clientes registrados en la simulación
         st.subheader("👤 Clientes")
@@ -223,8 +250,13 @@ with tabs[2]:
                     "destination": str(order.destination),
                     "status": order.status,
                     "priority": order.priority,
+<<<<<<< HEAD
                     "created_at": order.created_at.isoformat(),
                     "delivered_at": order.delivered_at.isoformat() if order.delivered_at else None,
+=======
+                    "created_at": order.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+                    "delivered_at": order.delivered_at.strftime("%Y-%m-%d %H:%M:%S") if order.delivered_at else None,
+>>>>>>> 561af5b8b8207df4be1a3e2593168893dade1e5c
                     "route_cost": order.cost,
                 }
                 orders_json.append(order_info)

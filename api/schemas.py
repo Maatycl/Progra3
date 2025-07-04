@@ -28,12 +28,22 @@ class OrderSchema(BaseModel):
     class Config:
         orm_mode = True
 
+<<<<<<< HEAD
 
 class SummarySchema(BaseModel):
     total_orders: int
     total_clients: int
     total_distance: float
     avg_order_cost: float
+=======
+class SummarySchema(BaseModel):
+    total_orders: int
+    total_clients: int
+    total_recharges: int
+    total_storages: int
+    total_distance: float
+    avg_route_length: float
+>>>>>>> 561af5b8b8207df4be1a3e2593168893dade1e5c
     max_order_cost: float
     min_order_cost: float
 

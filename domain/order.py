@@ -19,6 +19,10 @@ class Order:
         self.client = client                    # Cliente que solicitó la orden
         self.origin = origin                    # Nodo origen
         self.destination = destination          # Nodo destino
+<<<<<<< HEAD
+=======
+        self.path = path                        # Ruta real, con nodos intermedios
+>>>>>>> 561af5b8b8207df4be1a3e2593168893dade1e5c
         self.cost = cost                        # Costo de ruta
         self.priority = priority                # Prioridad de entrega
         self.status = "Pendiente"               # Estado Inicial
