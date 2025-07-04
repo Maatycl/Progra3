@@ -44,13 +44,15 @@ def draw_folium_map(sim, path=None, mst=None):
     # Agrega aristas del grafo
     for edge in graph.edges():
         u, v = edge.endpoints()
+        peso = edge.element()  # Obtiene el peso de la arista
         folium.PolyLine(
             locations=[coords[str(u)], coords[str(v)]],
             color="gray",
             weight=2,
-            opacity=0.5
+            opacity=0.5,
+            popup=f"Peso: {peso}"  # Popup con el peso de la arista
         ).add_to(m)
-    
+
     # Dibuja la ruta calculada, si se pasa
     if path:
         route_coords = [coords[str(node)] for node in path]

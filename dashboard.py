@@ -104,13 +104,16 @@ with tabs[1]:
         with col1:
             origen = st.selectbox("📍 Origen", labels)
         with col2:
-            destino = st.selectbox("🎯 Destino", labels)
+            destino = st.selectbox("🎯 Destino(Solo clientes", labels)
 
         st.markdown("### 🔍 Algoritmo de Enrutamiento")
         algorithm = st.radio("Algoritmo", options=["Dijkstra"], index=0)
 
         if st.button("✈ Calcular ruta", use_container_width=True):
-            if origen == destino:
+            destino_rol = sim.get_roles()[label_to_vertex[destino]]
+            if "Cliente" not in destino_rol:
+                st.warning("⚠️ El nodo destino debe ser un Cliente para calcular una ruta.")
+            elif origen == destino:
                 st.warning("⚠️ El nodo origen y destino no pueden ser iguales.")
             else:
                 adjusted_path, adjusted_cost = sim.find_route(label_to_vertex[origen], label_to_vertex[destino])
@@ -118,7 +121,6 @@ with tabs[1]:
                     st.session_state["ruta_actual"] = {"path": adjusted_path, "cost": adjusted_cost}
                     st.session_state["mst_actual"] = None  # limpiar MST
                     st.success("✅ Ruta calculada correctamente con Dijkstra y autonomía.")
-                    st.success("✅ Ruta calculada correctamente con Dijkstra")
                     st.session_state["info_ruta"] = {
                         "nodos": ' → '.join(str(v) for v in adjusted_path),
                         "costo": adjusted_cost
@@ -151,9 +153,12 @@ with tabs[1]:
         mst = st.session_state["mst_actual"] if st.session_state.get("mst_actual") else None
         draw_folium_map(sim, path=path, mst=mst)
 
+        # Separador visual para que el mapa no se sobreponga
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown("---")
+
         # Mostrar info de la ruta debajo del mapa
         if st.session_state.get("info_ruta"):
-            st.markdown("---")
             st.markdown(f"**Nodos en la ruta:** {st.session_state['info_ruta']['nodos']}")
             st.markdown(f"**Costo total:** {st.session_state['info_ruta']['costo']}")
             # Botón para completar la ruta
