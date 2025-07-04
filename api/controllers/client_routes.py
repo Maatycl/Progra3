@@ -20,3 +20,21 @@ def get_all_clients():
             total_orders=client.total_orders
         ) for client in clients
     ]
+
+@router.get("/clients/{client_id}", response_model=ClientSchema, summary="Obtener cliente")
+def get_client_by_id(client_id: str):
+    sim = get_simulation()
+    if sim is None or not sim.get_clients():
+        raise HTTPException(status_code=404, detail="No hay simulación activa o no hay clientes registrados.")
+
+    # Busca el cliente por ID
+    client = next((c for c in sim.get_clients() if c.id == client_id), None)
+    if not client:
+        raise HTTPException(status_code=404, detail=f"Cliente con ID {client_id} no encontrado.")
+
+    return ClientSchema(
+        id=client.id,
+        name=client.name,
+        location=str(client.vertex),
+        total_orders=client.total_orders
+    )

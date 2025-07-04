@@ -80,6 +80,9 @@ with tabs[0]:
 
         st.session_state.simulation = sim
         set_simulation(sim)
+        st.session_state.ruta_actual = None
+        st.session_state.mst_actual = None
+        st.session_state.info_ruta = None
 
 # ----------------- Pestaña 1: Explore Network ------------------
 with tabs[1]:
@@ -148,8 +151,16 @@ with tabs[1]:
             st.markdown(f"**Costo total:** {st.session_state['info_ruta']['costo']}")
             # Botón para completar la ruta
             if st.button("✅ Completar Ruta", use_container_width=True):
-                st.session_state.entrega_completada = True
-                st.success("Entrega completada. Puedes generar un nuevo cálculo o analizar rutas.")
+                sim = st.session_state.simulation
+                # Encuentra la orden que coincide con el origen y destino actuales
+                for order in sim.get_all_orders():
+                    if str(order.origin) == origen and str(order.destination) == destino:
+                        order.status = "Entregado"
+                        order.delivered_at = datetime.now()
+                        st.success(f"Orden {order.id} marcada como entregada.")
+                        break
+                else:
+                    st.warning("⚠️ No se encontró una orden que coincida con el origen y destino seleccionados.")
 
         # Mostrar cantidad de nodos por tipo debajo del mapa
         roles = sim.get_roles()

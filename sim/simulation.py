@@ -46,34 +46,42 @@ class Simulation:
         return order
 
     def find_route(self, origin, destination):
-        """Busca ruta usando Dijkstra como base, insertando recargas si se excede la autonomía."""
-        # Calcular ruta más corta origen → destino con Dijkstra
-        path, total_cost = self.graph.dijkstra_shortest_path(origin, destination)
-        if not path:
-            return None, None
-
-        # Revisar autonomía en el camino resultante
-        adjusted_path = []
+        """Busca ruta usando Dijkstra como base, insertando recargas si se excede la autonomía, recalculando desde recargas."""
+        current_node = origin
+        adjusted_path = [current_node]
         current_cost = 0
-        last_node = path[0]
-        adjusted_path.append(last_node)
 
-        for i in range(1, len(path)):
-            u, v = path[i-1], path[i]
-            edge_cost = self.graph.get_edge(u, v).element()
-            current_cost += edge_cost
+        while True:
+            # Calcular ruta actual hasta destino
+            path, total_cost = self.graph.dijkstra_shortest_path(current_node, destination)
+            if not path:
+                return None, None
 
-            if current_cost > AUTONOMY_LIMIT:
-                # Buscar recarga más cercana desde el último nodo antes de exceder autonomía
-                recharge, _ = self.find_nearest_recharge(last_node, self.vertex_roles)
-                if recharge and recharge not in adjusted_path:
-                    adjusted_path.append(recharge)
-                    current_cost = 0  # Reinicia autonomía tras recarga
+            for i in range(1, len(path)):
+                u, v = path[i-1], path[i]
+                edge_cost = self.graph.get_edge(u, v).element()
+                current_cost += edge_cost
+
+                if current_cost > AUTONOMY_LIMIT:
+                    # Buscar recarga más cercana desde el nodo actual
+                    recharge, _ = self.find_nearest_recharge(u, self.vertex_roles)
+                    if recharge:
+                        # Calcular ruta desde nodo actual a recarga
+                        subpath, _ = self.graph.dijkstra_shortest_path(u, recharge)
+                        if subpath is None or len(subpath) < 2:
+                            return None, None
+                        adjusted_path.extend(subpath[1:])
+                        current_cost = 0
+                        current_node = recharge  # reinicia cálculo desde recarga
+                        break  # recalcula ruta desde recarga hacia destino
+                    else:
+                        return None, None  # No hay recarga accesible
                 else:
-                    return None, None  # No hay recarga accesible, el dron no puede completar la ruta
+                    adjusted_path.append(v)
+                    current_node = v
 
-            adjusted_path.append(v)
-            last_node = v
+            if current_node == destination:
+                break  # destino alcanzado
 
         adjusted_cost = self.compute_total_cost(adjusted_path)
         return adjusted_path, adjusted_cost
