@@ -19,19 +19,13 @@ class Simulation:
 
         if not origins or not destinations:
             return None
-        
+
         origin = random.choice(origins)
         destination = random.choice(destinations)
 
-        path, cost = self.find_route(origin, destination)
-        if not path:
+        adjusted_path, adjusted_cost = self.find_route(origin, destination)
+        if not adjusted_path:
             return None
-
-        adjusted_path = self.enforce_autonomy_limit(path, self.vertex_roles)
-        if adjusted_path is None:
-            # No se puede completar la orden por falta de recarga
-            return None
-        adjusted_cost = self.compute_total_cost(adjusted_path)
 
         client_id = str(destination)
         if client_id not in self.clients:
@@ -52,46 +46,13 @@ class Simulation:
         return order
 
     def find_route(self, origin, destination):
-        """Busca ruta directa con DFS, sin recarga."""
-        def dfs(v, target, visited, path, cost):
-            if cost > AUTONOMY_LIMIT:
-                return None
-            visited.add(v)
-            path.append(v)
-            if v == target:
-                return list(path)
-            for neighbor in self.graph.neighbors(v):
-                if neighbor not in visited:
-                    edge = self.graph.get_edge(v, neighbor)
-                    result = dfs(neighbor, target, visited, path, cost + edge.element())
-                    if result:
-                        return result
-            path.pop()
-            visited.remove(v)
-            return None
+        """Busca ruta usando Dijkstra como base, insertando recargas si se excede la autonomía."""
+        # Calcular ruta más corta origen → destino con Dijkstra
+        path, total_cost = self.graph.dijkstra_shortest_path(origin, destination)
+        if not path:
+            return None, None
 
-        path = dfs(origin, destination, set(), [], 0)
-        if path:
-            total_cost = self.compute_total_cost(path)
-            return path, total_cost
-
-        # Sin ruta directa, intenta pasar por recargas manualmente
-        recharge_nodes = [v for v in self.graph.vertices() if "Recarga" in self.vertex_roles[v]]
-        for r1 in recharge_nodes:
-            path1 = dfs(origin, r1, set(), [], 0)
-            if not path1:
-                continue
-            path2 = dfs(r1, destination, set(), [], 0)
-            if not path2:
-                continue
-            full_path = path1 + path2[1:]
-            total_cost = self.compute_total_cost(full_path)
-            return full_path, total_cost
-
-        return None, None
-
-    def enforce_autonomy_limit(self, path, roles, autonomy_limit=AUTONOMY_LIMIT):
-        """Inserta nodos de recarga si la ruta excede la autonomía. Si no hay recarga accesible, retorna None."""
+        # Revisar autonomía en el camino resultante
         adjusted_path = []
         current_cost = 0
         last_node = path[0]
@@ -102,18 +63,20 @@ class Simulation:
             edge_cost = self.graph.get_edge(u, v).element()
             current_cost += edge_cost
 
-            if current_cost > autonomy_limit:
-                recharge, _ = self.find_nearest_recharge(last_node, roles)
+            if current_cost > AUTONOMY_LIMIT:
+                # Buscar recarga más cercana desde el último nodo antes de exceder autonomía
+                recharge, _ = self.find_nearest_recharge(last_node, self.vertex_roles)
                 if recharge and recharge not in adjusted_path:
                     adjusted_path.append(recharge)
-                    current_cost = 0  # reinicia autonomía tras recarga
+                    current_cost = 0  # Reinicia autonomía tras recarga
                 else:
-                    # No hay recarga accesible, el dron se queda sin batería
-                    return None
+                    return None, None  # No hay recarga accesible, el dron no puede completar la ruta
+
             adjusted_path.append(v)
             last_node = v
 
-        return adjusted_path
+        adjusted_cost = self.compute_total_cost(adjusted_path)
+        return adjusted_path, adjusted_cost
 
     def find_nearest_recharge(self, node, roles):
         """Busca el nodo de recarga más cercano desde 'node'."""

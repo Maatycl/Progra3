@@ -16,6 +16,13 @@ from domain.order import Order
 from domain.client import Client
 from visual.report_generator import generate_report_pdf
 from api.global_simulation import set as set_simulation
+import threading
+import uvicorn
+
+def run_api():
+    uvicorn.run("api.main:app", host="0.0.0.0", port=8000, reload=False)
+
+threading.Thread(target=run_api, daemon=True).start()
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
@@ -102,20 +109,20 @@ with tabs[1]:
             if origen == destino:
                 st.warning("⚠️ El nodo origen y destino no pueden ser iguales.")
             else:
-                if algorithm == "Dijkstra":
-                    path, cost = graph.dijkstra_shortest_path(label_to_vertex[origen], label_to_vertex[destino])
-                    if path and cost is not None and cost != float('inf'):
-                        st.session_state["ruta_actual"] = {"path": path, "cost": cost}
-                        st.session_state["mst_actual"] = None  # limpiar MST
-                        st.success(f"✅ Ruta calculada correctamente.")
-                        st.session_state["info_ruta"] = {
-                            "nodos": ' → '.join(str(v) for v in path),
-                            "costo": cost
-                        }
-                    else:
-                        st.session_state["ruta_actual"] = None
-                        st.session_state["info_ruta"] = None
-                        st.warning("⚠️ No se encontró una ruta válida entre los nodos seleccionados.")
+                adjusted_path, adjusted_cost = sim.find_route(label_to_vertex[origen], label_to_vertex[destino])
+                if adjusted_path:
+                    st.session_state["ruta_actual"] = {"path": adjusted_path, "cost": adjusted_cost}
+                    st.session_state["mst_actual"] = None  # limpiar MST
+                    st.success("✅ Ruta calculada correctamente con Dijkstra y autonomía.")
+                    st.session_state["info_ruta"] = {
+                        "nodos": ' → '.join(str(v) for v in adjusted_path),
+                        "costo": adjusted_cost
+                    }
+                else:
+                    st.session_state["ruta_actual"] = None
+                    st.session_state["info_ruta"] = None
+                    st.warning("⚠️ No se encontró ninguna ruta posible considerando autonomía y recargas.")
+
 
         if st.button("🌲 Mostrar MST", use_container_width=True):
             mst_edges = sim.compute_mst()
